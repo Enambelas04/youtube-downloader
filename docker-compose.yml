@@ -1,0 +1,26 @@
+services:
+  n8n:
+    build: .
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - NODE_FUNCTION_ALLOW_BUILTIN=child_process
+      - NODE_FUNCTION_ALLOW_EXTERNAL=*
+    volumes:
+      - ./n8n-data:/root/.n8n
+      - downloads:/tmp/downloads
+
+  web:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./youtube-downloader.html:/usr/share/nginx/html/index.html
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - downloads:/tmp/downloads
+
+volumes:
+  n8n_data:
+  downloads:

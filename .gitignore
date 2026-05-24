@@ -1,0 +1,11 @@
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.log
+n8n-data/
+nodes/
+storage/
+config
+test.txt
+Dockerfile.txt
+railway.json

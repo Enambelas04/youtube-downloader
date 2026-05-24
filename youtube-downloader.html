@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YT Downloader</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0a; --surface: #111111; --border: #222222;
+      --red: #ff3c3c; --red-dim: #ff3c3c22; --white: #f0f0f0;
+      --gray: #555555; --success: #00e676; --mp3: #f9a825;
+      --font-display: 'Syne', sans-serif; --font-mono: 'Space Mono', monospace;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--white); font-family: var(--font-display); overflow-x: hidden; }
+    body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 40px 40px; opacity: 0.4; z-index: 0; pointer-events: none; }
+    .container { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; }
+    .header { text-align: center; margin-bottom: 3rem; animation: fadeDown 0.7s ease both; }
+    .badge { display: inline-block; font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--red); border: 1px solid var(--red); padding: 0.3rem 0.8rem; margin-bottom: 1.2rem; border-radius: 2px; }
+    h1 { font-size: clamp(2.2rem, 8vw, 4.5rem); font-weight: 800; line-height: 1; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+    h1 span { color: var(--red); }
+    .subtitle { font-family: var(--font-mono); font-size: 0.8rem; color: var(--gray); letter-spacing: 0.05em; }
+    .card { width: 100%; max-width: 580px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 2rem; animation: fadeUp 0.7s 0.2s ease both; position: relative; overflow: hidden; }
+    .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--red), transparent); }
+    .label { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 0.6rem; display: block; }
+    .input-wrap { display: flex; gap: 0.75rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+    input[type="text"] { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; color: var(--white); font-family: var(--font-mono); font-size: 0.8rem; padding: 0.85rem 1rem; outline: none; transition: border-color 0.2s; }
+    input[type="text"]:focus { border-color: var(--red); }
+    input[type="text"]::placeholder { color: var(--gray); }
+    .format-wrap { display: flex; gap: 0.5rem; margin-bottom: 1.2rem; }
+    .format-btn { flex: 1; padding: 0.65rem; border-radius: 3px; border: 1px solid var(--border); background: var(--bg); color: var(--gray); font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s; text-align: center; }
+    .format-btn.active-mp4 { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+    .format-btn.active-mp3 { border-color: var(--mp3); color: var(--mp3); background: #f9a82522; }
+    button.btn-main { background: var(--red); color: #fff; border: none; border-radius: 3px; font-family: var(--font-display); font-weight: 700; font-size: 0.85rem; padding: 0.85rem 1.5rem; cursor: pointer; transition: background 0.2s, transform 0.1s; white-space: nowrap; flex-shrink: 0; }
+    button.btn-main:hover { background: #e02020; }
+    button.btn-main:disabled { background: var(--gray); cursor: not-allowed; }
+    button.btn-main.mp3-mode { background: var(--mp3); color: #000; }
+    .status { font-family: var(--font-mono); font-size: 0.75rem; padding: 0.75rem 1rem; border-radius: 3px; display: none; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
+    .status.loading { display: flex; background: var(--red-dim); border: 1px solid var(--red); color: var(--red); }
+    .status.success { display: flex; background: #00e67611; border: 1px solid var(--success); color: var(--success); }
+    .status.error { display: flex; background: var(--red-dim); border: 1px solid var(--red); color: var(--red); }
+    .spinner { width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    .result { display: none; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; padding: 1.2rem; margin-top: 0.5rem; }
+    .result.show { display: block; }
+    .result-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 0.6rem; }
+    .result-url { font-family: var(--font-mono); font-size: 0.7rem; color: var(--success); word-break: break-all; line-height: 1.5; margin-bottom: 1rem; }
+    .btn-download { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--success); color: #000; border: none; border-radius: 3px; font-family: var(--font-display); font-weight: 700; font-size: 0.8rem; padding: 0.7rem 1.2rem; cursor: pointer; text-decoration: none; transition: opacity 0.2s; width: 100%; justify-content: center; }
+    .btn-download.mp3 { background: var(--mp3); }
+    .footer { margin-top: 2.5rem; font-family: var(--font-mono); font-size: 0.65rem; color: var(--gray); text-align: center; letter-spacing: 0.08em; }
+    @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 480px) { .card { padding: 1.5rem; } .input-wrap { flex-direction: column; } button.btn-main { width: 100%; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="badge">▶ YT Downloader</div>
+      <h1>DOWNLOAD<br/><span>YOUTUBE</span></h1>
+      <p class="subtitle">paste url — pilih format — download</p>
+    </div>
+    <div class="card">
+      <span class="label">// URL Video YouTube</span>
+      <div class="input-wrap">
+        <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." />
+        <button class="btn-main" id="btnDownload" onclick="handleDownload()">GET</button>
+      </div>
+      <span class="label">// Pilih Format</span>
+      <div class="format-wrap">
+        <div class="format-btn active-mp4" id="btnMp4" onclick="setFormat('mp4')">▶ MP4 — Video</div>
+        <div class="format-btn" id="btnMp3" onclick="setFormat('mp3')">♪ MP3 — Audio</div>
+      </div>
+      <div class="status loading" id="statusLoading"><div class="spinner"></div><span id="loadingMsg">Memproses...</span></div>
+      <div class="status error" id="statusError"><span>✕</span><span id="errorMsg">Terjadi kesalahan.</span></div>
+      <div class="status success" id="statusSuccess"><span>✓</span><span>Link berhasil didapat!</span></div>
+      <div class="result" id="result">
+        <div class="result-label" id="resultLabel">// Direct Download Link</div>
+        <div class="result-url" id="resultUrl"></div>
+        <a class="btn-download" id="btnOpen" href="#" target="_blank">↓ Download</a>
+      </div>
+    </div>
+    <div class="footer">powered by n8n + yt-dlp &nbsp;|&nbsp; mp4 & mp3 ready</div>
+  </div>
+  <script>
+    const WEBHOOK_URL = '/webhook/download-youtube';
+    let selectedFormat = 'mp4';
+    function setFormat(f) {
+      selectedFormat = f;
+      document.getElementById('btnMp4').className = 'format-btn' + (f==='mp4' ? ' active-mp4' : '');
+      document.getElementById('btnMp3').className = 'format-btn' + (f==='mp3' ? ' active-mp3' : '');
+      document.getElementById('btnDownload').className = 'btn-main' + (f==='mp3' ? ' mp3-mode' : '');
+    }
+    function show(el) { el.style.display = 'flex'; }
+    function hide(el) { el.style.display = 'none'; }
+    function resetStatus() {
+      hide(document.getElementById('statusLoading'));
+      hide(document.getElementById('statusError'));
+      hide(document.getElementById('statusSuccess'));
+      document.getElementById('result').classList.remove('show');
+    }
+    async function handleDownload() {
+      const url = document.getElementById('urlInput').value.trim();
+      if (!url) { document.getElementById('errorMsg').textContent = 'Masukkan URL YouTube!'; resetStatus(); show(document.getElementById('statusError')); return; }
+      resetStatus();
+      document.getElementById('loadingMsg').textContent = selectedFormat==='mp3' ? 'Memproses audio...' : 'Memproses video...';
+      show(document.getElementById('statusLoading'));
+      document.getElementById('btnDownload').disabled = true;
+      try {
+        const response = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+          body: JSON.stringify({ url, format: selectedFormat })
+        });
+        const data = await response.json();
+        hide(document.getElementById('statusLoading'));
+        if (data.download_url) {
+          show(document.getElementById('statusSuccess'));
+          document.getElementById('resultUrl').textContent = data.download_url;
+          document.getElementById('btnOpen').href = data.download_url;
+          const btnOpen = document.getElementById('btnOpen');
+cat > youtube-downloader.html << 'HTMLEOF'
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YT Downloader</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0a; --surface: #111111; --border: #222222;
+      --red: #ff3c3c; --red-dim: #ff3c3c22; --white: #f0f0f0;
+      --gray: #555555; --success: #00e676; --mp3: #f9a825;
+      --font-display: 'Syne', sans-serif; --font-mono: 'Space Mono', monospace;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--white); font-family: var(--font-display); overflow-x: hidden; }
+    body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 40px 40px; opacity: 0.4; z-index: 0; pointer-events: none; }
+    .container { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; }
+    .header { text-align: center; margin-bottom: 3rem; animation: fadeDown 0.7s ease both; }
+    .badge { display: inline-block; font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--red); border: 1px solid var(--red); padding: 0.3rem 0.8rem; margin-bottom: 1.2rem; border-radius: 2px; }
+    h1 { font-size: clamp(2.2rem, 8vw, 4.5rem); font-weight: 800; line-height: 1; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+    h1 span { color: var(--red); }
+    .subtitle { font-family: var(--font-mono); font-size: 0.8rem; color: var(--gray); letter-spacing: 0.05em; }
+    .card { width: 100%; max-width: 580px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 2rem; animation: fadeUp 0.7s 0.2s ease both; position: relative; overflow: hidden; }
+    .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--red), transparent); }
+    .label { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 0.6rem; display: block; }
+    .input-wrap { display: flex; gap: 0.75rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+    input[type="text"] { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; color: var(--white); font-family: var(--font-mono); font-size: 0.8rem; padding: 0.85rem 1rem; outline: none; transition: border-color 0.2s; }
+    input[type="text"]:focus { border-color: var(--red); }
+    input[type="text"]::placeholder { color: var(--gray); }
+    .format-wrap { display: flex; gap: 0.5rem; margin-bottom: 1.2rem; }
+    .format-btn { flex: 1; padding: 0.65rem; border-radius: 3px; border: 1px solid var(--border); background: var(--bg); color: var(--gray); font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s; text-align: center; }
+    .format-btn.active-mp4 { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+    .format-btn.active-mp3 { border-color: var(--mp3); color: var(--mp3); background: #f9a82522; }
+    button.btn-main { background: var(--red); color: #fff; border: none; border-radius: 3px; font-family: var(--font-display); font-weight: 700; font-size: 0.85rem; padding: 0.85rem 1.5rem; cursor: pointer; transition: background 0.2s, transform 0.1s; white-space: nowrap; flex-shrink: 0; }
+    button.btn-main:hover { background: #e02020; }
+    button.btn-main:disabled { background: var(--gray); cursor: not-allowed; }
+    button.btn-main.mp3-mode { background: var(--mp3); color: #000; }
+    .status { font-family: var(--font-mono); font-size: 0.75rem; padding: 0.75rem 1rem; border-radius: 3px; display: none; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
+    .status.loading { display: flex; background: var(--red-dim); border: 1px solid var(--red); color: var(--red); }
+    .status.success { display: flex; background: #00e67611; border: 1px solid var(--success); color: var(--success); }
+    .status.error { display: flex; background: var(--red-dim); border: 1px solid var(--red); color: var(--red); }
+    .spinner { width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    .result { display: none; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; padding: 1.2rem; margin-top: 0.5rem; }
+    .result.show { display: block; }
+    .result-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray); margin-bottom: 0.6rem; }
+    .result-url { font-family: var(--font-mono); font-size: 0.7rem; color: var(--success); word-break: break-all; line-height: 1.5; margin-bottom: 1rem; }
+    .btn-download { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--success); color: #000; border: none; border-radius: 3px; font-family: var(--font-display); font-weight: 700; font-size: 0.8rem; padding: 0.7rem 1.2rem; cursor: pointer; text-decoration: none; transition: opacity 0.2s; width: 100%; justify-content: center; }
+    .btn-download.mp3 { background: var(--mp3); }
+    .footer { margin-top: 2.5rem; font-family: var(--font-mono); font-size: 0.65rem; color: var(--gray); text-align: center; letter-spacing: 0.08em; }
+    @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 480px) { .card { padding: 1.5rem; } .input-wrap { flex-direction: column; } button.btn-main { width: 100%; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="badge">▶ YT Downloader</div>
+      <h1>DOWNLOAD<br/><span>YOUTUBE</span></h1>
+      <p class="subtitle">paste url — pilih format — download</p>
+    </div>
+    <div class="card">
+      <span class="label">// URL Video YouTube</span>
+      <div class="input-wrap">
+        <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." />
+        <button class="btn-main" id="btnDownload" onclick="handleDownload()">GET</button>
+      </div>
+      <span class="label">// Pilih Format</span>
+      <div class="format-wrap">
+        <div class="format-btn active-mp4" id="btnMp4" onclick="setFormat('mp4')">▶ MP4 — Video</div>
+        <div class="format-btn" id="btnMp3" onclick="setFormat('mp3')">♪ MP3 — Audio</div>
+      </div>
+      <div class="status loading" id="statusLoading"><div class="spinner"></div><span id="loadingMsg">Memproses...</span></div>
+      <div class="status error" id="statusError"><span>✕</span><span id="errorMsg">Terjadi kesalahan.</span></div>
+      <div class="status success" id="statusSuccess"><span>✓</span><span>Link berhasil didapat!</span></div>
+      <div class="result" id="result">
+        <div class="result-label" id="resultLabel">// Direct Download Link</div>
+        <div class="result-url" id="resultUrl"></div>
+        <a class="btn-download" id="btnOpen" href="#" target="_blank">↓ Download</a>
+      </div>
+    </div>
+    <div class="footer">powered by n8n + yt-dlp &nbsp;|&nbsp; mp4 & mp3 ready</div>
+  </div>
+  <script>
+    const WEBHOOK_URL = '/webhook/download-youtube';
+    let selectedFormat = 'mp4';
+    function setFormat(f) {
+      selectedFormat = f;
+      document.getElementById('btnMp4').className = 'format-btn' + (f==='mp4' ? ' active-mp4' : '');
+      document.getElementById('btnMp3').className = 'format-btn' + (f==='mp3' ? ' active-mp3' : '');
+      document.getElementById('btnDownload').className = 'btn-main' + (f==='mp3' ? ' mp3-mode' : '');
+    }
+    function show(el) { el.style.display = 'flex'; }
+    function hide(el) { el.style.display = 'none'; }
+    function resetStatus() {
+      hide(document.getElementById('statusLoading'));
+      hide(document.getElementById('statusError'));
+      hide(document.getElementById('statusSuccess'));
+      document.getElementById('result').classList.remove('show');
+    }
+    async function handleDownload() {
+      const url = document.getElementById('urlInput').value.trim();
+      if (!url) { document.getElementById('errorMsg').textContent = 'Masukkan URL YouTube!'; resetStatus(); show(document.getElementById('statusError')); return; }
+      resetStatus();
+      document.getElementById('loadingMsg').textContent = selectedFormat==='mp3' ? 'Memproses audio...' : 'Memproses video...';
+      show(document.getElementById('statusLoading'));
+      document.getElementById('btnDownload').disabled = true;
+      try {
+        const response = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+          body: JSON.stringify({ url, format: selectedFormat })
+        });
+        const data = await response.json();
+        hide(document.getElementById('statusLoading'));
+        if (data.download_url) {
+          show(document.getElementById('statusSuccess'));
+          document.getElementById('resultUrl').textContent = data.download_url;
+          document.getElementById('btnOpen').href = data.download_url;
+          const btnOpen = document.getElementById('btnOpen');
+          if (selectedFormat==='mp3') { btnOpen.className='btn-download mp3'; btnOpen.textContent='♪ Download Audio MP3'; document.getElementById('resultLabel').textContent='// Direct Audio Link (MP3)'; }
+          else { btnOpen.className='btn-download'; btnOpen.textContent='↓ Download Video MP4'; document.getElementById('resultLabel').textContent='// Direct Video Link (MP4)'; }
+          document.getElementById('result').classList.add('show');
+        } else { document.getElementById('errorMsg').textContent='Gagal mendapat link.'; show(document.getElementById('statusError')); }
+      } catch(err) { hide(document.getElementById('statusLoading')); document.getElementById('errorMsg').textContent='Tidak dapat terhubung ke server.'; show(document.getElementById('statusError')); }
+      finally { document.getElementById('btnDownload').disabled = false; }
+    }
+    document.getElementById('urlInput').addEventListener('keydown', e => { if(e.key==='Enter') handleDownload(); });
+  </script>
+</body>
+</html>

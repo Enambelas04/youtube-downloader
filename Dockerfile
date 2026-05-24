@@ -1,5 +1,6 @@
-FROM docker.n8n.io/n8nio/n8n:latest
+FROM node:20-slim
 USER root
-RUN wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -O /usr/local/bin/yt-dlp && chmod a+rx /usr/local/bin/yt-dlp
-USER node
-
+RUN apt-get update && apt-get install -y python3 python3-pip ffmpeg curl && pip3 install yt-dlp --break-system-packages
+RUN npm install -g n8n
+EXPOSE 5678
+CMD ["n8n", "start"]
